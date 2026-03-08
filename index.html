@@ -210,30 +210,29 @@
         let currentCategory = 'all';
         let priceData = {};
 
-        // 使用Yahoo Finance API获取实时数据
+        // 使用Yahoo Finance API获取实时数据 - 通过CORS代理
         async function fetchYahooFinance(symbol) {
             try {
-                // 使用多个CORS代理作为备选
-                const proxies = [
-                    `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`,
+                // 使用免费的CORS代理服务
+                const corsProxies = [
+                    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`)}`,
+                    `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`)}`,
                 ];
                 
-                for (const url of proxies) {
+                for (const proxyUrl of corsProxies) {
                     try {
-                        const response = await fetch(url, {
+                        const response = await fetch(proxyUrl, {
                             method: 'GET',
-                            headers: {
-                                'Accept': 'application/json',
-                            }
+                            headers: { 'Accept': 'application/json' }
                         });
+                        
                         if (response.ok) {
                             const data = await response.json();
                             if (data.chart && data.chart.result && data.chart.result[0]) {
                                 const result = data.chart.result[0];
                                 const meta = result.meta;
-                                const quote = result.indicators.quote[0];
-                                const lastPrice = meta.regularMarketPrice || quote.close[quote.close.length - 1];
-                                const prevClose = meta.previousClose || meta.chartPreviousClose;
+                                const lastPrice = meta.regularMarketPrice || meta.previousClose;
+                                const prevClose = meta.chartPreviousClose || meta.previousClose;
                                 const change = lastPrice - prevClose;
                                 const changePct = (change / prevClose) * 100;
                                 
@@ -242,12 +241,13 @@
                                     change: change,
                                     changePct: changePct,
                                     prevClose: prevClose,
+                                    isReal: true,
                                     timestamp: new Date().toISOString()
                                 };
                             }
                         }
                     } catch (e) {
-                        console.log(`Proxy failed for ${symbol}:`, e.message);
+                        console.log(`Proxy failed:`, e.message);
                         continue;
                     }
                 }
